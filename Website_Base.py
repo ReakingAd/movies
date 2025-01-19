@@ -1,5 +1,6 @@
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 import os
 import re
 import time
@@ -7,31 +8,87 @@ import time
 import ffmpeg
 from loguru import logger
 import requests
-# TODO: log文件夹
-# TODO: 工作文件夹
+# TODO: 命令行参数形式调用
+# TODO: 1. 删除多余的碎片文件
+# TODO: 2. 自动解析 网站 
+
 # 基类
 class Website_Handler(ABC):
-    
+
     path = os.path.dirname(__file__)
-    work_path = '' # 针对下载某个影片的任务，创建工作目录
-    download_path = f"{path}/downloads" # 视频文件保存目录
-    concat_list_file = f"{path}/concat_list.txt" # 视频碎片信息汇总，后续用于合并视频
 
-    html = ''
+    html = '' # 视频网页的html代码
+    workspace = '' # 当前影片的工作目录。每个影片都有自己的workspace
     film_name = '' # 电影名
-    local_html_file = f"{path}/index.html"
+    local_html_file = '' # html本地保存的文件
+
     url_m3u8_file_1 = '' # 第一个m3u8的 url
-    local_m3u8_file_1 = f"{path}/index.1.m3u8" # 本地保存的 m3u8 文件1
+    local_m3u8_file_1 = '' # 本地保存的第一个 m3u8 文件
     url_m3u8_file_2 = '' # 第二个 m3u8 文件的url
-    local_m3u8_file_2 = f"{path}/index.2.m3u8" # 本地保存的第二个 m3u8 文件
-
+    local_m3u8_file_2 = '' # 本地保存的第二个 m3u8 文件
+    segments = '' # 视频文件保存目录
+    concat_list_file = '' # 视频碎片信息汇总，后续用于合并视频
+    log_file = '' # 日志文件
+    
     max_retry = 5 # 下载最大尝试次数
     retry_delay = 5 # 下载重试的时间间隔
 
-    urls = []
+    urls = [] # 从m3u8文件解析出的视频碎片的url。是一个迭代器
 
-    max_retry = 5 # 下载最大尝试次数
-    retry_delay = 5 # 下载重试的时间间隔
+    def download(self, url):
+        self.get_html(url)
+        self.init_current_workspace()
+        logger.info(f'>>>>>>>>>>>>>>>>>>>> 开始下载电影：{self.film_name}')
+        self.prase_url_m3u8_file_1()
+        self.download_m3u8_file_1()
+        self.parse_url_m3u8_file_2()
+        self.download_m3u8_file_2()
+        self.parse_urls_video_segment()
+        self.downloads_videos()
+        self.merge_segment()
+    
+    # 下载第一个 m3u8 文件
+    def download_m3u8_file_1(self):
+        logger.info(f"开始拉取第一个 m3u8 文件的内容...{self.url_m3u8_file_1}")
+        response = requests.get(self.url_m3u8_file_1)
+        with open(self.local_m3u8_file_1, 'w') as f:
+            f.write(response.text)
+
+    # 解析第一个 m3u8 文件的url
+    def prase_url_m3u8_file_1(self):
+        logger.info('开始解析第一个 m3u8 文件...')
+        pattern_m3u8_1 = r'https:.*?/index.m3u8'
+        pattern_m3u8_1_result = re.search(pattern_m3u8_1, self.html)
+        self.url_m3u8_file_1 = pattern_m3u8_1_result.group(0).replace('\\', '')
+        logger.info(f"解析出第一个 m3u8 文件的 url：{self.url_m3u8_file_1}")
+    
+    # 初始化当前影片的工作目录。 
+    def init_current_workspace(self):
+        self.parse_film_name()
+        self.workspace = os.path.join(self.path, 'downloads', self.film_name)
+        
+        self.log_file = os.path.join(self.workspace, f'{datetime.now().strftime('%Y-%m-%d')}.log')
+        logger.add(self.log_file, level="INFO", format="{time} - {level} - {message}")
+
+        if not os.path.exists(self.workspace):
+            os.makedirs(self.workspace)
+            logger.info(f'创建影片工作目录完成：{self.workspace}')
+        else:
+            logger.info(f'影片工作目录已经存在:{self.workspace}')
+        
+        self.local_html_file = f'{self.workspace}/index.html'
+        with open(self.local_html_file, 'w', encoding='utf-8') as f:
+            f.write(self.html)
+
+        self.local_m3u8_file_1 = os.path.join(self.workspace, 'index.1.m3u8')
+        self.local_m3u8_file_2 = os.path.join(self.workspace, 'index.2.m3u8')
+        self.segments = os.path.join(self.workspace, 'segments')
+        self.concat_list_file = os.path.join(self.workspace, 'concat_list.txt')
+
+    def get_html(self, url):
+        logger.info(f'开始下载 html: {url}')
+        response = requests.get(url, timeout=300)
+        self.html = response.text
 
     # 解析第二个 m3u8 文件
     @abstractmethod
@@ -42,44 +99,12 @@ class Website_Handler(ABC):
     def parse_film_name():
         pass
 
-
-    def get_html(self, url):
-        logger.info(f'开始下载 html: {url}')
-        response = requests.get(url)
-        if(response.status_code == 200):
-            self.html = response.text
-            with open(self.local_html_file, 'w', encoding='utf-8') as f:
-                f.write(response.text)
-                logger.info('下载 html 完成.')
-        else:
-            logger.error('下载 html 出错.')
-
-    def create_work_path(self):
-        self.work_path = f'{self.path}/{self.film_name}'
-        if not os.path.exists(self.work_path):
-            os.makedirs(self.work_path)
-            logger.info(f'创建影片工作目录完成：{self.work_path}')
-        else:
-            logger.info(f'影片工作目录已经存在:{self.work_path}')
-
-    def download(self, url):
-        self.get_html(url)
-        self.parse_film_name()
-        logger.info(f'>>>>>>>>>>>>>>>>>>>> 开始下载电影：{self.film_name}')
-        self.prase_url_m3u8_file_1()
-        self.download_m3u8_file_1()
-        self.parse_url_m3u8_file_2()
-        self.download_m3u8_file_2()
-        self.parse_urls_video_segment()
-        self.downloads_videos()
-        self.merge_segment()
-    
     # 合并视频碎片
     def merge_segment(self):
         (
             ffmpeg
                 .input(self.concat_list_file, format='concat', safe=0)
-                .output(f"{self.path}/{self.film_name}.mp4", vcodec='copy', acodec='copy')
+                .output(f"{os.path.join(self.workspace, self.film_name)}.mp4", vcodec='copy', acodec='copy')
                 .run()
         )
     # 下载视频碎片
@@ -103,10 +128,12 @@ class Website_Handler(ABC):
                         time.sleep(self.retry_delay)
                     else:
                         logger.info(f"已经达到最大尝试次数，下载失败：{url}")
-
-            with open(f"{self.download_path}/{filename}.ts", 'wb') as f, open(self.concat_list_file, 'a') as f_list:
+            if not os.path.exists(self.segments):
+                os.makedirs(self.segments)
+            segment_path = os.path.join(self.segments, f'{filename}.ts')
+            with open(segment_path, 'wb') as f, open(self.concat_list_file, 'a', encoding='utf-8') as f_list:
                 f.write(response.content)
-                f_list.write(f"file '{self.download_path}/{filename}.ts'\n")
+                f_list.write(f"file '{segment_path}'\n")
                 
     
     # 拉取第二个 m3u8 文件
@@ -125,18 +152,3 @@ class Website_Handler(ABC):
             pattern_m3u8_2_result = re.search(pattern_m3u8_2, text)
             self.url_m3u8_file_2 = self.url_m3u8_file_1.replace('index.m3u8', pattern_m3u8_2_result.group(0))
             logger.info(f"解析出第二个 m3u8 文件的url：{self.url_m3u8_file_2}")
-
-    # 下载第一个 m3u8 文件
-    def download_m3u8_file_1(self):
-        logger.info(f"开始拉取第一个 m3u8 文件的内容...{self.url_m3u8_file_1}")
-        response = requests.get(self.url_m3u8_file_1)
-        with open(self.local_m3u8_file_1, 'w') as f:
-            f.write(response.text)
-
-    # 解析第一个 m3u8 文件的url
-    def prase_url_m3u8_file_1(self):
-        logger.info('开始解析第一个 m3u8 文件...')
-        pattern_m3u8_1 = r'https:.*?/index.m3u8'
-        pattern_m3u8_1_result = re.search(pattern_m3u8_1, self.html)
-        self.url_m3u8_file_1 = pattern_m3u8_1_result.group(0).replace('\\', '')
-        logger.info(f"解析出第一个 m3u8 文件的 url：{self.url_m3u8_file_1}")

@@ -2,33 +2,22 @@ from abc import ABC, abstractmethod
 from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
 
-class m3u8_strategy(ABC):
-    @abstractmethod
-    def parse_urls_in_m3u8(self):
-        pass
+import ffmpeg
 
-class m3u8_strategy_chabeihu(m3u8_strategy):
-    def parse_urls_in_m3u8(self):
-        print('in chabeihu')
+# ffmpeg -i "F:\litao\workspace_py\download_videos\movies\哈利波特7HD中字版\downloads\f0015e42756000001.ts" "F:\litao\workspace_py\download_videos\movies\哈利波特7HD中字版\哈利波特7HD中字版.mp4"
 
-# a = m3u8_strategy_chabeihu()
-# a.parse_urls_in_m3u8()
+(
+    ffmpeg
+        # .input('F:\\litao\\workspace_py\\download_videos\\movies\\哈利波特7HD中字版\\downloads\\f0015e42756000001.ts', format='concat', safe=0)
+        # .input('concat_list.txt', format='concat', safe=0)
+        .input('F:\\litao\\workspace_py\\download_videos\\movies\\哈利波特7HD中字版\\concat_list.txt', format='concat', safe=0)
 
-config = {
-    'strategy': {
-        'chabeihu': m3u8_strategy_chabeihu
-    }
-}
-def parse(website):
-    print(config['strategy'].get('chabeihu'))
-    return config['strategy']['chabeihu']
+        .output(f"123.mp4", vcodec='copy', acodec='copy')
+        .run()
+)
 
-a = parse('aaaaaa')().parse_urls_in_m3u8()
-
-# class Test_A():
-#     value = 123
-#     def calc(self):
-#         return self.value + 1000
-    
-# test_a = Test_A()
-# print(test_a.calc())
+# stream = ffmpeg.input('concat_list.txt', format='concat', safe=0)
+# print(stream)
+# stream = ffmpeg.output(stream, 'F:\litao\workspace_py\download_videos\movies\哈利波特7HD中字版\哈利波特7HD中字版.mp4')
+# print(stream)
+# ffmpeg.run(stream)
