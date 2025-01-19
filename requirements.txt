@@ -1,0 +1,10 @@
+certifi==2024.12.14
+charset-normalizer==3.4.1
+colorama==0.4.6
+ffmpeg-python==0.2.0
+future==1.0.0
+idna==3.10
+loguru==0.7.3
+requests==2.32.3
+urllib3==2.3.0
+win32_setctime==1.2.0
