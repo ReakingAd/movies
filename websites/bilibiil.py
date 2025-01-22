@@ -4,7 +4,6 @@ import re
 import ffmpeg
 from loguru import logger
 import requests
-# TODO：log
 # TODO: 视频分辨率
 
 class BilibiliDownloader():
@@ -67,7 +66,7 @@ class BilibiliDownloader():
 
     def get_html(self):
         logger.info("开始下载html...")
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(self.url, headers=self.headers)
         if response.status_code == 200:
             logger.info("下载html成功")
             self.html = response.text

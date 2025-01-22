@@ -19,7 +19,7 @@ import requests
 # response = driver.listen.wait()
 
 # 基类
-class Website_Handler(ABC):
+class DownloaderBase(ABC):
 
     path = os.path.dirname(__file__)
 
