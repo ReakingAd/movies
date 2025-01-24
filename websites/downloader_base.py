@@ -8,16 +8,16 @@ import time
 import ffmpeg
 from loguru import logger
 import requests
-# TODO: 改名： Downloader
 # TODO: 命令行参数形式调用
 # TODO: 1. 删除多余的碎片文件
 # TODO: 2. 自动解析 网站 
-# TODO: https://www.bilibili.com/video/BV1wZ421e7Fr?spm_id_from=333.788.videopod.episodes&vd_source=fda0d59c12dcd36c1eccec649fa28042&p=4
+# TODO: 3. https://www.bilibili.com/video/BV1wZ421e7Fr?spm_id_from=333.788.videopod.episodes&vd_source=fda0d59c12dcd36c1eccec649fa28042&p=4
 # driver = ChromiumPage()   
 # driver.listen.start('api.bilibili.com/x/space/wbi/arc/search')
 # driver.get('https://space.bilibili.com/3493110839511225/video')
 # response = driver.listen.wait()
-
+# TODO: 4. 与抓包工具结合？fiddler
+# TODO: 5. 虎龙，快速搭建的电影网站，是从哪获得的那么多电影资源？
 # 基类
 class DownloaderBase(ABC):
 
