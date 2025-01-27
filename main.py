@@ -26,15 +26,16 @@ if __name__ == '__main__':
     # handler = Website_Handler_Factory.create_handler('chabeihu')
     # handler.download('https://www.chabei1.com/vodplay/87783-1-1.html')
 
-    # handler = Website_Handler_Factory.create_handler('xingkongyingshi')
-    # handler.download('https://www.xkvvv.com/play/6874/1/1/')
+    url = 'https://www.xkvvv.com/play/56067/1/16/'
+    handler = Website_Handler_Factory.create_handler('xingkongyingshi')
+    handler.download(url)
 
-    # url = 'https://www.bilibili.com/video/BV1Z3wsebEKk'
+    # url = 'https://www.bilibili.com/video/BV1sRrUYREfR/'
     # handler = Website_Handler_Factory.create_handler('bilibili')
     # handler.download(url)
 
-    # url = 'https://www.douyin.com/user/MS4wLjABAAAAkiq8LIkcpNLZO-oRIVLYiAT7cy6Fqf8rc_gRfyb-cNs?from_tab_name=main&modal_id=7427263655978323235'
-    url = 'https://www.douyin.com/user/MS4wLjABAAAAuefGYlA8R1LkM9_sdOA_bjLeRgdWw1Kq9dAlQgRP-bEt90e3XJsf1cBKrgOcnskS?from_tab_name=main&modal_id=7440318809648418084'
-    handler = Website_Handler_Factory.create_handler('douyin')
-    handler.download(url)
+    # url = 'https://www.douyin.com/user/MS4wLjABAAAAuefGYlA8R1LkM9_sdOA_bjLeRgdWw1Kq9dAlQgRP-bEt90e3XJsf1cBKrgOcnskS?from_tab_name=main&modal_id=7440318809648418084'
+    # url = 'https://www.douyin.com/user/MS4wLjABAAAAkiq8LIkcpNLZO-oRIVLYiAT7cy6Fqf8rc_gRfyb-cNs?from_tab_name=main&modal_id=7456755034823396643'
+    # handler = Website_Handler_Factory.create_handler('douyin')
+    # handler.download(url)
     

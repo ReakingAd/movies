@@ -4,3 +4,4 @@ downloads
 venv/
 env/
 .venv/
+states/

@@ -17,4 +17,4 @@ class XingKongYingShiDownloader(DownloaderBase):
         with open(self.local_m3u8_file_2, 'r') as f:
             content = f.read()
             matches = re.finditer(pattern_url, content)
-            self.urls = (self.url_m3u8_file_2.replace('index.m3u8', match.group(1)) for match in matches)   
+            self.urls = (re.sub(r'(index|mixed).m3u8', match.group(1), self.url_m3u8_file_2) for match in matches)   
