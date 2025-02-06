@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import os
 import re
+import sys
 import time
 
 import ffmpeg
@@ -12,6 +13,7 @@ import requests
 # 基类
 class DownloaderBase(ABC):
 
+    website = None # 当前工作的视频网站名称
     path = os.path.dirname(__file__)
 
     html = '' # 视频网页的html代码
@@ -31,11 +33,12 @@ class DownloaderBase(ABC):
     retry_delay = 5 # 下载重试的时间间隔
 
     urls = [] # 从m3u8文件解析出的视频碎片的url。是一个迭代器
+    urls_len = None # 视频碎片的个数
 
     def download(self, url):
         self.get_html(url)
         self.init_current_workspace()
-        logger.info(f'>>>>>>>>>>>>>>>>>>>> 开始下载电影：{self.film_name}')
+        print(f'>>>>>>>>>> {self.film_name} <<<<<<<<<<')
         self.prase_url_m3u8_file_1()
         self.download_m3u8_file_1()
         self.parse_url_m3u8_file_2()
@@ -46,18 +49,18 @@ class DownloaderBase(ABC):
     
     # 下载第一个 m3u8 文件
     def download_m3u8_file_1(self):
-        logger.info(f"开始拉取第一个 m3u8 文件的内容...{self.url_m3u8_file_1}")
+        print(f"[{self.website}] 拉取第一个 m3u8 文件")
         response = requests.get(self.url_m3u8_file_1)
         with open(self.local_m3u8_file_1, 'w') as f:
             f.write(response.text)
 
     # 解析第一个 m3u8 文件的url
     def prase_url_m3u8_file_1(self):
-        logger.info('开始解析第一个 m3u8 文件...')
+        print(f'[{self.website}] 解析第一个 m3u8 文件的url')
         pattern_m3u8_1 = r'https:.*?/index.m3u8'
         pattern_m3u8_1_result = re.search(pattern_m3u8_1, self.html)
         self.url_m3u8_file_1 = pattern_m3u8_1_result.group(0).replace('\\', '')
-        logger.info(f"解析出第一个 m3u8 文件的 url：{self.url_m3u8_file_1}")
+        # print(f"解析出第一个 m3u8 文件的 url：{self.url_m3u8_file_1}")
     
     # 初始化当前影片的工作目录。 
     def init_current_workspace(self):
@@ -69,9 +72,10 @@ class DownloaderBase(ABC):
 
         if not os.path.exists(self.workspace):
             os.makedirs(self.workspace)
-            logger.info(f'创建影片工作目录完成：{self.workspace}')
+            # print(f'创建影片工作目录完成：{self.workspace}')
         else:
-            logger.info(f'影片工作目录已经存在:{self.workspace}')
+            # print(f'影片工作目录已经存在:{self.workspace}')
+            pass
         
         self.local_html_file = f'{self.workspace}/index.html'
         with open(self.local_html_file, 'w', encoding='utf-8') as f:
@@ -83,14 +87,13 @@ class DownloaderBase(ABC):
         self.concat_list_file = os.path.join(self.workspace, 'concat_list.txt')
 
     def get_html(self, url):
-        logger.info(f'开始下载 html: {url}')
+        print(f'[{self.website}] 拉取 html: {url}')
         response = requests.get(url, timeout=300)
         self.html = response.text
 
     # 解析第二个 m3u8 文件
     @abstractmethod
     def parse_urls_video_segment(self):
-        logger.info('开始解析视频碎片的url...')
         pass
     @abstractmethod
     def parse_film_name():
@@ -106,26 +109,34 @@ class DownloaderBase(ABC):
         )
     # 下载视频碎片
     def downloads_videos(self):
-        logger.info("开始下载视频碎片...")
+        # print("开始下载视频碎片...")
+        index = 0
+        total = len(self.urls)
         for url in self.urls:
-            logger.info(f'开始下载视频{url}')
+            # print(f'[{self.website}] 开始下载视频{url}')
             pattern_video_name = r'/([^/]*?)\.(ts|jpeg)'
             result = re.search(pattern_video_name, url)
             filename = result.group(1)
             # ext = result.group(2)
-            logger.info(f"开始下载片段：{url}")
+            # print(f"开始下载片段：{url}")
             for attempt in range(self.max_retry):
                 try:
                     response = requests.get(url, timeout=30)
-                    print(f"下载完成==========")
+                    # print(f"下载完成==========")
+                    index += 1
+                    percent = index / total
+                    arrow = '▊' * int(percent * 50)
+                    spaces = ' ' * (50 - len(arrow))
+                    sys.stdout.write(f'\r[{self.website}] {self.film_name} [{arrow}{spaces}] {percent:.2%}')
+                    # sys.stdout.write(f'\r{self.film_name}:{index}>>>>>{percent:.2%}')
                     break
                 except Exception as e:
-                    logger.warning(f"失败..")
+                    logger.warning(f"失败..{e}")
                     if attempt < self.max_retry - 1:
-                        logger.info(f"等待 {self.retry_delay} 秒后重试...")
+                        print(f"等待 {self.retry_delay} 秒后重试...")
                         time.sleep(self.retry_delay)
                     else:
-                        logger.info(f"已经达到最大尝试次数，下载失败：{url}")
+                        print(f"已经达到最大尝试次数，下载失败：{url}")
             if not os.path.exists(self.segments):
                 os.makedirs(self.segments)
             segment_path = os.path.join(self.segments, f'{filename}.ts')
@@ -136,17 +147,17 @@ class DownloaderBase(ABC):
     
     # 拉取第二个 m3u8 文件
     def download_m3u8_file_2(self):
-        logger.info("开始拉取第二个 m3u8 文件")
+        print(f"[{self.website}] 拉取第二个 m3u8 文件")
         response = requests.get(self.url_m3u8_file_2)
         with open(self.local_m3u8_file_2, 'w') as f:
             f.write(response.text)
 
     # 解析第二个 m3u8 文件的 url
     def parse_url_m3u8_file_2(self):
-        logger.info("开始解析第二个 m3u8 文件的url...")
+        print(f"[{self.website}] 解析第二个 m3u8 文件的url")
         with open(self.local_m3u8_file_1, 'r') as f:
             text = f.read()
             pattern_m3u8_2 = r'\d.*?.m3u8'
             pattern_m3u8_2_result = re.search(pattern_m3u8_2, text)
             self.url_m3u8_file_2 = self.url_m3u8_file_1.replace('index.m3u8', pattern_m3u8_2_result.group(0))
-            logger.info(f"解析出第二个 m3u8 文件的url：{self.url_m3u8_file_2}")
+            # print(f"解析出第二个 m3u8 文件的url：{self.url_m3u8_file_2}")

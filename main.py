@@ -23,12 +23,13 @@ class Website_Handler_Factory():
 
         
 if __name__ == '__main__':
-    # handler = Website_Handler_Factory.create_handler('chabeihu')
-    # handler.download('https://www.chabei1.com/vodplay/87783-1-1.html')
+    handler = Website_Handler_Factory.create_handler('chabeihu')
+    handler.download('https://www.chabei1.com/vodplay/87783-1-1.html')
+    # http://www.cbh1.cc/p/172571/40/6270949
 
-    url = 'https://www.xkvvv.com/play/56067/1/16/'
-    handler = Website_Handler_Factory.create_handler('xingkongyingshi')
-    handler.download(url)
+    # url = 'https://www.xkvvv.com/play/56067/1/16/'
+    # handler = Website_Handler_Factory.create_handler('xingkongyingshi')
+    # handler.download(url)
 
     # url = 'https://www.bilibili.com/video/BV1sRrUYREfR/'
     # handler = Website_Handler_Factory.create_handler('bilibili')

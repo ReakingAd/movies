@@ -196,10 +196,11 @@ class QQMusicDownloader():
 
 if __name__ == '__main__':
     url = 'https://y.qq.com/n/ryqq/songDetail/0015BszJ09xZ2z'
-    # downloader = QQMusicDownloader()
-    # downloader.auth(song_id)
+    
+    downloader = QQMusicDownloader()
 
-    # song_id = '0015BszJ09xZ2z'
+    song_id = '0015BszJ09xZ2z'
+    downloader.auth(song_id)
     # downloader.download_song(song_id)
     
     # album_id = '002q7zOx4DkZBr'

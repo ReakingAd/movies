@@ -1,76 +1,67 @@
+from enum import Enum, unique
 import queue
 import threading
 
 from qqmusic import QQMusicDownloader
+from chabeihu import ChaBeiHuDownloader
+from xingkongyingshi import XingKongYingShiDownloader
+# from websites.xingkongyingshi import XingKongYingShiDownloader
 
-# 歌曲
-def song_worker(task_queue):
+@unique
+class TASK_TYPE(Enum):
+    QQMUSIC_SONG = 1 # QQ音乐：单曲
+    QQMUSIC_ALBUM = 2 # QQ音乐：专辑
+    XIONGKONGYINGSHI = 3 # 星空影视
+    """
+    https://www.chabei1.com/vodplay/87783-1-1.html
+    http://www.cbh1.cc/p/172571/40/6270949
+    """
+    CHANEIHU = 4 # 茶杯狐 TODO：网站改版，代码失效需要更新逻辑
+
+def downloader_factory(type):
+    if type == TASK_TYPE.QQMUSIC_SONG or type == TASK_TYPE.QQMUSIC_ALBUM:
+        return QQMusicDownloader()
+    elif type == TASK_TYPE.XIONGKONGYINGSHI:
+        return XingKongYingShiDownloader()
+    elif type == TASK_TYPE.CHANEIHU:
+        return ChaBeiHuDownloader()
+
+def worker(task_queue):
     while True:
-        song_id = task_queue.get()
-        if song_id == None:
+        task = task_queue.get()
+        print(task)
+        if task == None:
             break
-        dlr = QQMusicDownloader()
-        dlr.download_song(song_id)
-        task_queue.task_done()
+        dlr = downloader_factory(task['type'])
+        if task['type'] == TASK_TYPE.QQMUSIC_SONG:
+            dlr.download_song(task['target'])
+        elif task['type'] == TASK_TYPE.QQMUSIC_ALBUM:
+            dlr.download_album(task['target'])
+        elif task['type'] == TASK_TYPE.XIONGKONGYINGSHI:
+            dlr.download(task['target'])
+        elif task['type'] == TASK_TYPE.CHANEIHU:
+            dlr.download(task['target'])
 
-# 音乐专辑
-def album_worker(task_queue):
-    while True:
-        album_id = task_queue.get()
-        if album_id == None:
-            break
-        dlr = QQMusicDownloader()
-        dlr.download_album(album_id)
-        task_queue.task_done()
-
-def run(type, ids):
+def run(tasks):
     task_queue = queue.Queue()
-
-    target_func = {
-        'QQMusic Song': song_worker,
-        'QQMusic Album': album_worker,
-    }
-    thread = threading.Thread(target=target_func[type], args=(task_queue,))
+    thread = threading.Thread(target=worker, args=[task_queue,]) # 下载线程，负责将任务队列的任务一个一个的下载下来
     thread.start()
-    
-    for id in ids:
-        task_queue.put(id)
+
+    for task in tasks:
+        task_queue.put(task)
     
     task_queue.join()
     task_queue.put(None)
-    print('***All tasks have been done***')
+    print("All tasks have been done......")
+
+
 if __name__ == '__main__':
-    # type = 'QQMusic Song'
-    # song_ids = [
-    #     '000KHITg34Ffid', # Death04 (Explicit)
-    #     '002cmJ0r3Lvkjy', # Separated
-    #     '000Kt7GS3ebcRS', # Truth
-    #     '000mWWoW2ql7xP', # The Alarm
-    #     '002lcMCu4LhstE', # Godspeed to the Freaks
-    #     '000iqHgc4btf19',
-    #     '003gdMkd3kJDCi',
-    #     '004NbAy41nrYtq',
-    #     '003GW7La25VC2B',
-    #     '001H9Zif4FQbfr'
-    # ]
-    type = 'QQMusic Album'
-    album_ids = [
-        '000f01724fd7TH', # Jay
-        '000I5jJB3blWeN', # 范特西
-        '004MGitN0zEHpb', # 八度空间
-        '000MkMni19ClKG', # 叶惠美
-        '003DFRzD192KKD', # 七里香
-        '0024bjiL2aocxT', # 十一月的萧邦
-        '002jLGWe16Tf1H', # 依然范特西
-        '001UP7mW458ipG', # 不能说的秘密 电影原声带
-        '002eFUFm2XYZ7z', # 我很忙
-        '002Neh8l0uciQZ', # 魔杰座
-        '000bviBl4FjTpO', # 跨时代
-        '003KNcyk0t3mwg', # 惊叹号
-        '003Ow85E3pnoqi', # 十二新作
-        '003b9EXT2QU0T7', # 黄俊郎的黑
-        '001uqejs3d6EID', # 哎呦，不错哦
-        '003RMaRI1iFoYd', # 周杰伦的床边故事
-        '0042cH172YJ0mz', # 最伟大的作品
+    tasks = [
+        # {'type': 'QQMusic Song', 'target': '000KHITg34Ffid'},
+        # {'type': 'QQMusic Album', 'target': '0046jew92EyhAb'},
+        # {'type': 'xingkongyingshi', 'target': 'https://www.xkvvv.com/play/118811/3/1/'},
+        # {'type': TASK_TYPE.XIONGKONGYINGSHI, 'target': 'https://www.xkvvv.com/play/397/1/1/'},
+        {'type': TASK_TYPE.CHANEIHU, 'target': 'https://www.chabei1.com/vodplay/87783-1-1.html'},
+        # {'type': TASK_TYPE.CHANEIHU, 'target': 'http://www.cbh1.cc/p/172571/40/6270949'},
     ]
-    run(type, album_ids)
+    run(tasks)

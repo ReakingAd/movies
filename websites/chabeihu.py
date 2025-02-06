@@ -1,6 +1,6 @@
 import re
 from loguru import logger
-from websites.downloader_base import DownloaderBase
+from downloader_base import DownloaderBase
 
 # 茶杯狐影院
 class ChaBeiHuDownloader(DownloaderBase):

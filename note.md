@@ -9,37 +9,26 @@ venv\Scripts\activate   # 进入虚拟环境
 (venv): pip freeze > requirements.txt
 (venv): pip install
 ```
-
-# TODO：学学yt-dlp的log写法
-# TODO: 命令行参数形式调用
-# TODO: 1. 删除多余的碎片文件
-# TODO: 3. https://www.bilibili.com/video/BV1wZ421e7Fr?spm_id_from=333.788.videopod.episodes&vd_source=fda0d59c12dcd36c1eccec649fa28042&p=4
-# driver = ChromiumPage()   
-# driver.listen.start('api.bilibili.com/x/space/wbi/arc/search')
-# driver.get('https://space.bilibili.com/3493110839511225/video')
-# response = driver.listen.wait()
-# TODO: 4. 与抓包工具结合？fiddler
-# TODO: 5. 虎龙，快速搭建的电影网站，是从哪获得的那么多电影资源？
-# TODO: bilibili插件，
+# TODO: 1. re多行模式
+# TODO: 0. xingkongyingshi 可以改为多线程下载同时下载碎片。提高下载速度
+# TODO: 0. 星空影视，下载进度条
+# TODO: 1. 与抓包工具结合？fiddler
+# TODO: 2. 虎龙，快速搭建的电影网站，是从哪获得的那么多电影资源？
+# TODO: 3. bilibili插件，
     1. 记录什么时候，哪个视频关注的up
     2. 下载视频、下载音频
     3. 暗色模式
-# TODO：cookie插件，保存符合Netscape format的文件cookies.txt
-# TODO: 抖音： cookie怎么弄，手动获取复制进来，有没有自动的方法
-# TODO：大漠插件？是按键精灵的插件吧
-# TODO: 魔兽拍卖行auto量化交易。卖店价>拍卖价，套利
-# TODO：股票模拟盘，测试量化交易
-# TODO: syber 算命
-
-# TODO: 1. 自动解析 网站 
-# TODO: 直播录屏
+# TODO：4. cookie插件，保存符合Netscape format的文件cookies.txt
+# TODO: 5. syber 算命
+# TODO: 5. 酒店 AI
+        https://www.bilibili.com/video/BV1oCNxeTE4P/?spm_id_from=333.788.top_right_bar_window_dynamic.content.click&vd_source=fda0d59c12dcd36c1eccec649fa28042
+        07：08
+# TODO: 6. 直播录屏
     1. 迅捷屏幕录像工具：支持高清录制、灵活的录制区域选择、丰富的音频录制模式以及视频编辑功能。
     2. Camtasia：这是一款专业屏幕录制和视频编辑软件，支持全屏、窗口、区域等多种录制模式，并内置丰富的视频剪辑工具和特效。
     3. Loom：提供剪辑、音频调整、特效添加等多种编辑工具，支持多种视频格式和分辨率。
 ```python
 import optparse
-
-# TODO: bilibili插件： 我是因为哪个视频关注的这个up
 
 def main():
     parser = optparse.OptionParser(usage="usage: %prog [options] arg1 arg2")
@@ -131,3 +120,9 @@ queue.task_done() 通知队列该任务完成。 会使队列中未完成任务�
 queue.put() 讲任务加入队列。会使队列中未完成任务的计数 +1
 queue.join() 阻塞等待，知道队列未完成任务的计数为0 （即task_done()调用次数==put()调用次数）
 ```
+
+# 正则表达式
+> pattern = re.compile(r'^v\S+', re.MULTILINE)
+多行模式 `re.MULTILINE` 会改变行首`^`行尾`$`的行为
+- 使用多行模式：`^`, `$`会匹配每一行的行首、行尾
+- 不使用多行模式：`^`, `$`会匹配字符串整体的行首、行尾

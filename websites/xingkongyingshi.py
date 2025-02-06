@@ -1,9 +1,12 @@
 import re
 from loguru import logger
-from websites.downloader_base import DownloaderBase
+# from websites.downloader_base import DownloaderBase
+from downloader_base import DownloaderBase
 
 # 星空影视
 class XingKongYingShiDownloader(DownloaderBase):
+    def __init__(self):
+        self.website = '星空影视'
     def parse_film_name(self):
         pattern = r'hl-infos-title">.*?<a.*?>(.*?)</a>.*?<em.*?>(.*?)</em>'
         result = re.search(pattern, self.html)
@@ -17,4 +20,5 @@ class XingKongYingShiDownloader(DownloaderBase):
         with open(self.local_m3u8_file_2, 'r') as f:
             content = f.read()
             matches = re.finditer(pattern_url, content)
-            self.urls = (re.sub(r'(index|mixed).m3u8', match.group(1), self.url_m3u8_file_2) for match in matches)   
+            self.urls = [re.sub(r'(index|mixed).m3u8', match.group(1), self.url_m3u8_file_2) for match in matches]
+            # self.urls_len = 2083
