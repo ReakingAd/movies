@@ -1,5 +1,6 @@
 from enum import Enum, unique
 import queue
+import subprocess
 import threading
 import time
 
@@ -14,18 +15,19 @@ from xingkongyingshi import XingKongYingShiDownloader
 class TASK_TYPE(Enum):
     QQMUSIC_SONG = 1 # QQ音乐：单曲
     QQMUSIC_ALBUM = 2 # QQ音乐：专辑
-    XIONGKONGYINGSHI = 3 # 星空影视
+    XINGKONGYINGSHI_EPISODE = 3 # 星空影视-单集
+    XINGKONGYINGSHI_SERIES = 4 # 星空影视-系列
+    BILIBILI = 5 # b站
     """
     https://www.chabei1.com/vodplay/87783-1-1.html
     http://www.cbh1.cc/p/172571/40/6270949
     """
-    CHANEIHU = 4 # 茶杯狐 TODO：网站改版，代码失效需要更新逻辑
-    BILIBILI = 5 # b站
+    CHANEIHU = 999 # 茶杯狐 TODO：网站改版，代码失效需要更新逻辑
 
 def downloader_factory(type):
     if type == TASK_TYPE.QQMUSIC_SONG or type == TASK_TYPE.QQMUSIC_ALBUM:
         return QQMusicDownloader()
-    elif type == TASK_TYPE.XIONGKONGYINGSHI:
+    elif type == TASK_TYPE.XINGKONGYINGSHI_EPISODE or type == TASK_TYPE.XINGKONGYINGSHI_SERIES:
         return XingKongYingShiDownloader()
     elif type == TASK_TYPE.CHANEIHU:
         return ChaBeiHuDownloader()
@@ -44,14 +46,16 @@ def worker(task_queue):
             dlr.download_song(task['target'])
         elif task['type'] == TASK_TYPE.QQMUSIC_ALBUM:
             dlr.download_album(task['target'])
-        elif task['type'] == TASK_TYPE.XIONGKONGYINGSHI:
+        elif task['type'] == TASK_TYPE.XINGKONGYINGSHI_EPISODE:
             dlr.download(task['target'])
+        elif task['type'] == TASK_TYPE.XINGKONGYINGSHI_SERIES:
+            dlr.download_series(task['target'])
         elif task['type'] == TASK_TYPE.CHANEIHU:
             dlr.download(task['target'])
         elif task['type'] == TASK_TYPE.BILIBILI:
             dlr.download(task['target'])
         else:
-            logger.error(f'未找到下载器 {task['type']}')
+            logger.error(f"未找到下载器 {task['type']}")
         # 【要点3】 通知任务队列 task_queue 当前任务完成
         task_queue.task_done()
 
@@ -81,14 +85,37 @@ def run(tasks):
     # 【要点6】 (阻塞) 主线程会阻塞在这里，等待 thread 子线程中的任务执行完毕
     thread.join() 
     print("所有任务执行完毕")
+    # subprocess.run(["shutdown", "/s", "/t", "60"])
 
 
 if __name__ == '__main__':
     tasks = [
-        {'type': TASK_TYPE.QQMUSIC_SONG, 'target': '0015BszJ09xZ2z'},
+        # {'type': TASK_TYPE.QQMUSIC_SONG, 'target': '0015BszJ09xZ2z'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001FGFZV3KXqN3'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000PYepk3k0ByX'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000rYMQ21IgaIR'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004GArUe26PXvZ'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003sxEME2BlVBh'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001kUrJE405DEt'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004YUmlB1MK3yJ'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003P7CPk0ACl2F'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000PZ8J80itI0D'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003rcri00ODLql'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003jAGlr3Tyf51'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004Hmy4f0AsI0N'},
         {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '0046jew92EyhAb'},
-        {'type': TASK_TYPE.XIONGKONGYINGSHI, 'target': 'https://www.xkvvv.com/play/397/1/1/'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003eESMq10TVKi'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '002c2r3b1pncdb'},
+        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001KxUJv4VjpUC'},
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/115337/3/1/'},
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 29498},
+        # {'type': TASK_TYPE.XINGKONGYINGSHI, 'target': 'https://www.xkvvv.com/play/397/1/1/'},
         # {'type': TASK_TYPE.CHANEIHU, 'target': 'https://www.chabei1.com/vodplay/87783-1-1.html'},
-        {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ'},
+        # {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ?p=2'},
     ]
+    # for i in range(31, 41):
+    #     target = f'https://www.xkvvv.com/play/29498/1/{i}/'
+    #     tasks.append({'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': target })
+    # for task in tasks:
+    #     print(task)
     run(tasks)

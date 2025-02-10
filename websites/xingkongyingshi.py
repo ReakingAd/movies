@@ -28,9 +28,9 @@ class XingKongYingShiDownloader():
         self.video_name = None
         self.m3u8_2_url = None
         self.segment_urls = None
-        self.max_workers = 100 # 线程池大小
+        self.max_workers = 5 # 线程池大小
         self.max_retry = 5
-        self.retry_delay = 3
+        self.retry_delay = 30
 
         self.workspace = None
         self.m3u8_1_local = None
@@ -44,7 +44,7 @@ class XingKongYingShiDownloader():
     def get_html(self, url):
         try:
             logger.info(f'下载 html')
-            rsp = requests.get(url)
+            rsp = requests.get(url, timeout=5)
             rsp.raise_for_status()
             return rsp.text
         except requests.exceptions.HTTPError as e:
@@ -54,14 +54,6 @@ class XingKongYingShiDownloader():
                 logger.error(f'请求失败，状态码：{e.response.status_code}')
         except requests.exceptions.RequestException as e:
             logger.error(f'请求发生错误: {e}')
-    
-    def get_m3u8_1(self):
-        rsp = requests.get(self.m3u8_1_url)
-        if rsp.status_code == 200:
-            with open('1.m3u8', 'w', encoding='utf-8') as f:
-                f.write(rsp.text)
-        else:
-            logger.error(f'error: {rsp.status_code}')
 
     def parse_video_name(self):
         pattern = re.compile(r'<span.*?class="hl-infos-title"><a.*?>(.*?)</a><em.*?>(.*?)</em>') 
@@ -83,14 +75,23 @@ class XingKongYingShiDownloader():
             logger.error('解析第一个 m3u8 文件的 url 失败')
 
     def get_m3u8(self, url, local_file):
-        try:
-            rsp = requests.get(url)
-            rsp.raise_for_status()
-            _path = os.path.join(self.workspace, local_file)
-            with open(_path, 'w', encoding='utf-8') as f:
-                f.write(rsp.text)
-        except requests.exceptions.RequestException as e:
-            logger.error(f'请求失败：{rsp.status_code} {rsp.content}')
+        for attempt in range(self.max_retry):
+            try:
+                rsp = requests.get(url, timeout=5)
+                rsp.raise_for_status()
+                _path = os.path.join(self.workspace, local_file)
+                with open(_path, 'w', encoding='utf-8') as f:
+                    f.write(rsp.text)
+                break
+            except requests.exceptions.Timeout:
+                logger.error(f'请求超时, {self.retry_delay}s 后重试')
+                time.sleep(self.retry_delay)
+            except requests.exceptions.RequestException as e:
+                logger.error(f'请求失败：{e}, {self.retry_delay}s 后重试')
+                time.sleep(self.retry_delay)
+        else:
+            logger.error(f'达到最大尝试次数,下载 m3u8 失败')
+            raise Exception('下载 m3u8 失败')
 
     def parse_m3u8_2_url(self):
         file_path = os.path.join(self.workspace, '1.m3u8')
@@ -111,7 +112,7 @@ class XingKongYingShiDownloader():
             pattern = re.compile(r'^(\S+\.ts)$', re.MULTILINE)
             rst = re.findall(pattern, text)
             if rst is not None:
-                self.segment_urls = [f'{ re.sub(r'[^/]+$', el, self.m3u8_2_url)}' for el in rst]
+                self.segment_urls = [f"{ re.sub(r'[^/]+$', el, self.m3u8_2_url)}" for el in rst]
                 logger.info(f'解析视频碎片 urls')
             else:
                 logger.error('解析视频碎片 urls 失败')
@@ -151,7 +152,7 @@ class XingKongYingShiDownloader():
         for attemp in range(self.max_retry):
             try:
                 start_time = time.time()
-                rsp = requests.get(url)
+                rsp = requests.get(url, timeout=5)
                 end_time = time.time()
                 _path = os.path.join(self.workspace, 'segments', segment_name)
                 with open(_path, 'wb') as f:
@@ -275,16 +276,17 @@ class XingKongYingShiDownloader():
         while not episode_queue.empty():
             episode_url = episode_queue.get()
             logger.info(f'下载单集：{episode_url}')
-            dlr.download(episode_url)
+            self.download(episode_url)
 
 
 if __name__ == '__main__':
     
-    url = 'https://www.xkvvv.com/play/106075/1/13/'
+    # url = 'https://www.xkvvv.com/play/118482/2/37/'
+    url = 'https://www.xkvvv.com/play/115337/3/1/'
     dlr = XingKongYingShiDownloader()
     dlr.url = url
-    # dlr.download(url)
-    dlr.download_series(106074)
+    dlr.download(url)
+    # dlr.download_series(106074)
 
 # class XingKongYingShiDownloader(DownloaderBase):
 #     def __init__(self):

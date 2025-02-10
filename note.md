@@ -9,6 +9,8 @@ venv\Scripts\activate   # 进入虚拟环境
 (venv): pip freeze > requirements.txt
 (venv): pip install
 ```
+# TODO: 0. 快手爬虫
+# TODO: 0. 百度网盘爬虫
 # TODO: 1. 与抓包工具结合？fiddler
 # TODO: 2. 虎龙，快速搭建的电影网站，是从哪获得的那么多电影资源？
 # TODO: 3. bilibili插件，

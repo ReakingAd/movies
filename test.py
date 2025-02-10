@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, unique
 import os
 import queue
 import random
@@ -6,30 +6,18 @@ import re
 import sys
 import threading
 import time
+import subprocess
 
-def worker(task_queue):
-    while True:
-        print('in while.............')
-        task = task_queue.get()
-        if task is None:
-            break
-        print(f'task={task}')
-        print(f'in worker: {task}')
-        task_queue.task_done()
+for attempt in range(3):
+    if attempt == 2:
+        break
+    print(f"Attempt {attempt + 1}")
+else:
+    print("Max attempts reached")
 
 if __name__ == '__main__':
-    tasks = [1, 2, 3]
-    task_queue = queue.Queue()
-    
-    thread = threading.Thread(target=worker, args=[task_queue,])
-    thread.start()
-
-    time.sleep(4)
-    for el in tasks:
-        task_queue.put(el)
-
-    task_queue.join()
-    task_queue.put(None)
-
-    print('all done')
-
+    # print(Task_Type.QQMUSIC_SONG)
+    # print(Task_Type.QQMUSIC_ALBUM)
+    subprocess.run(["shutdown", "/s", "/t", "60"])
+    time.sleep(3)
+    subprocess.run(["shutdown", "/a"])

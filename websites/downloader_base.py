@@ -67,7 +67,7 @@ class DownloaderBase(ABC):
         self.parse_film_name()
         self.workspace = os.path.join(self.path, 'downloads', self.film_name)
         
-        self.log_file = os.path.join(self.workspace, f'{datetime.now().strftime('%Y-%m-%d')}.log')
+        self.log_file = os.path.join(self.workspace, f"{datetime.now().strftime('%Y-%m-%d')}.log")
         logger.add(self.log_file, level="INFO", format="{time} - {level} - {message}")
 
         if not os.path.exists(self.workspace):
