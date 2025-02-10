@@ -1,13 +1,21 @@
 import json
 import os
 import re
+import shutil
+from time import time
 import ffmpeg
 from loguru import logger
 import requests
-# TODO: 视频分辨率
+# TODO: 1. 视频分辨率
+# TODO: 3. 只下载音频
+# TODO: 4. 下载合集
+#      https://www.bilibili.com/video/BV16A411W7SQ?p=1
+#      https://www.bilibili.com/video/BV16A411W7SQ?p=2
+#      https://www.bilibili.com/video/BV16A411W7SQ?p=3
 
 class BilibiliDownloader():
     def __init__(self):
+        self.website = 'Bilibili'
         self.headers = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.57",
             "referer": "https://space.bilibili.com/1556651916/dynamic?spm_id_from=333.1365.list.card_title.click"
@@ -25,51 +33,53 @@ class BilibiliDownloader():
         self.video_file = None # 保存视频文件
         self.audio_file = None # 保存音频文件
 
-    def parse_bv(self):
-        pattern = r'BV\w{10}'
-        match = re.search(pattern, self.url)
-        if match:
-            self.bv_id = match.group(0)
-            logger.info(f'解析到的BV号：{self.bv_id}')
-        else:
-            logger.error('未能解析到BV号')
-    def init_workspace(self):
-        self.workspace = os.path.join(self.path, 'downloads', self.bv_id)
-        if not os.path.exists(self.workspace):
-            os.makedirs(self.workspace)
-            logger.info('创建工作目录成功')
-        else:
-            logger.warning('工作目录 {self.workspace} 已经存在')
-        self.local_html_file = os.path.join(self.workspace, 'index.html')
-        with open(self.local_html_file, 'w', encoding="utf-8") as f:
-            f.write(self.html)
-        self.video_file = os.path.join(self.workspace, f'{self.bv_id}.video.mp4')
-        self.audio_file = os.path.join(self.workspace, f'{self.bv_id}.audio.mp3')
-    
-    def parse_video_name(self):
-        pattern = r'class="video-info-title-inner".*?<h1.*?>(.*?)</h1>'
-        result = re.search(pattern, self.html)
-        if result is not None:
-            self.video_name = result.group(1)
-        else:
-            logger.warning('解析视频名称失败')
+        self.max_retry = 5
+        self.retry_delay = 3
+
     def download(self, url):
         self.url = url
-        self.get_html()
-        self.parse_bv()
-        self.parse_video_name()
+        self.html = self.get_html(url)
+        self.bv_id = self.parse_bv()
+        self.video_name = self.parse_video_name()
         self.init_workspace()
         self.parse_video_info()
         self.get_video()
         self.get_audio()
         self.merge()
+        self.clear_workspace()
 
-    def get_html(self):
-        logger.info("开始下载html...")
-        response = requests.get(self.url, headers=self.headers)
+    def parse_bv(self):
+        pattern = r'BV\w{10}'
+        match = re.search(pattern, self.url)
+        if match is not None:
+            bv_id = match.group()
+            logger.info(f'[{self.website}] 解析出的BV号: {bv_id}')
+            return bv_id
+        else:
+            logger.error(f'[{self.website}] 未能解析到BV号')
+
+    def init_workspace(self):
+        self.workspace = os.path.join(self.path, 'downloads', self.video_name)
+        if not os.path.exists(self.workspace):
+            os.makedirs(self.workspace)
+        else:
+            logger.warning('工作目录 {self.workspace} 已经存在')
+        self.video_file = os.path.join(self.workspace, f'{self.video_name}.video.mp4')
+        self.audio_file = os.path.join(self.workspace, f'{self.video_name}.audio.mp3')
+    
+    def parse_video_name(self):
+        pattern = r'class="video-info-title-inner".*?<h1.*?>(.*?)</h1>'
+        result = re.search(pattern, self.html)
+        if result is not None:
+            return result.group(1)
+        else:
+            logger.warning('解析视频名称失败')
+
+    def get_html(self, url):
+        response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
-            logger.info("下载html成功")
-            self.html = response.text
+            logger.info(f"[{self.website}] 下载html")
+            return response.text
         else:
             logger.error(f"下载html失败. Status Code: {response.status_code}")
 
@@ -81,38 +91,73 @@ class BilibiliDownloader():
             self.video_info = json.loads(info)
             self.video_url = self.video_info['data']['dash']['video'][0]['baseUrl'] 
             self.audio_url = self.video_info['data']['dash']['audio'][0]['baseUrl'] 
-            logger.info(f'解析playinfo完成,video_url={self.video_url}, audio_url={self.audio_url}')
-
+            logger.info(f'[{self.website}] 解析出视频下载地址、音频下载地址')
         else:
-            logger.error("解析playinfo失败")
+            logger.error(f"[{self.website}] 解析视频、音频下载地址失败")
 
     def get_video(self):
-        response = requests.get(self.video_url, headers=self.headers)
-        if response.status_code == 200:
-            with open(self.video_file, 'wb') as f:
-                f.write(response.content)
-            logger.info('下载视频文件成功')
-        else:
-            logger.error("下载视频失败")
+        logger.info(f'[{self.video_name}]')
+        for attempt in range(self.max_retry):
+            try:
+                response = requests.get(self.video_url, headers=self.headers)
+                with open(self.video_file, 'wb') as f:
+                    f.write(response.content)
+                logger.info(f'[{self.video_name}] 视频文件下载成功')
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < self.max_retry - 1:
+                    logger.error(f'[{self.video_name}] 视频下载失败, {self.retry_delay}s 后重试...')
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f'[{self.video_name}] 下载达到最大常识次数, 下载失败')
+            except IOError as e:
+                logger.error(f'[{self.video_name}] 写入文件失败: {e}')
+            except Exception as e:
+                logger.error(f'[{self.video_name}] 未知错误：{e}')
 
     def get_audio(self):
-        response = requests.get(self.audio_url, headers=self.headers)
-        if response.status_code == 200:
-            with open(self.audio_file, 'wb') as f:
-                f.write(response.content)
-            logger.info('下载音频文件成功')
-        else:
-            logger.error("下载音频失败")
+        for attemp in range(self.max_retry):
+            try:
+                response = requests.get(self.audio_url, headers=self.headers)
+                with open(self.audio_file, 'wb') as f:
+                    f.write(response.content)    
+                logger.info(f'[{self.video_name}] 音频文件下载完成')
+                break
+            except requests.exceptions.RequestException as e:
+                if attemp < self.max_retry:
+                    logger.error(f'[{self.video_name}] 音频下载失败， {self.retry_delay}s 后重试...')
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f'[{self.video_name}] 音频达到最大常识次数，下载失败')
+            except IOError as e:
+                logger.error(f'[{self.video_name}] 音频写入文件失败: {e}')
+            except Exception as e:
+                logger.error(f'[{self.video_name}] 音频未知错误：{e}')
+
     def merge(self):
-        logger.info("开始合并视频和音频...")
-        video_input = ffmpeg.input(self.video_file)
-        audio_input = ffmpeg.input(self.audio_file)
-        ffmpeg.output(video_input, audio_input, os.path.join(self.workspace, f'{self.video_name}.mp4')).run()
-        logger.info('视频视频完成。')
+        logger.info(f'[{self.website}] 开始合并视频、音频文件...')
+        try:
+            video_input = ffmpeg.input(self.video_file)
+            audio_input = ffmpeg.input(self.audio_file)
+            (
+                ffmpeg
+                    .output(video_input, audio_input, os.path.join(self.workspace, f'{self.video_name}.mp4'))
+                    .run()
+            )
+        except Exception as e:
+            logger.error(f'[{self.video_name}] 合并视频、音频文件出错。{e}')
 
-
+    def clear_workspace(self):
+        video_file = os.path.join(self.workspace, f'{self.video_name}.mp4')
+        curr_dir = os.path.dirname(video_file)
+        parent_dir = os.path.dirname(curr_dir)
+        try:
+            shutil.move(video_file, parent_dir)
+            shutil.rmtree(self.workspace)
+        except Exception as e:
+            logger.error(f'清理工作区失败: {e}')
 
 if __name__ == '__main__':
-    url = 'https://www.bilibili.com/video/BV1Z3wsebEKk'
+    url = 'https://www.bilibili.com/video/BV1gf421d72w'
     downloader = BilibiliDownloader()
     downloader.download(url)

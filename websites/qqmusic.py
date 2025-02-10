@@ -17,6 +17,7 @@ TODO: 2. 下载歌单
     - 歌单列表  post  https://u6.y.qq.com/cgi-bin/musics.fcg?_=1738385137683&sign=zzc866b382epzcrf0uzij5ibttmujmhszzfq3bf82561
     - 负载： req_3":{"module":"music.srfDissInfo.aiDissInfo","method":"uniform_get_Dissinfo","param":{"disstid":8353804440,"userinfo":1,"tag":1,"orderlist":1,"song_begin":0,"song_num":10,"onlysonglist":0,"enc_host_uin":""}},"
     关键点 song_begin, song_num
+TODO: 3. task.py 不能正常退出主进程。join()理解的不够，学学
 """
 
 class QQMusicDownloader():

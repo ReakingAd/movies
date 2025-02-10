@@ -4,6 +4,7 @@ import queue
 import re
 import shutil
 import sys
+import threading
 import time
 import ffmpeg
 from loguru import logger
@@ -12,7 +13,7 @@ import requests
 from downloader_base import DownloaderBase
 
 # 星空影视
-class XingKongYingShi():
+class XingKongYingShiDownloader():
     def __init__(self):
 
         log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
@@ -38,13 +39,14 @@ class XingKongYingShi():
 
         self.download_speed = 0 # 下载速度
         self.speed_queue = queue.Queue() # 计算下载速度用到的队列
+        #####
 
-    def get_html(self):
+    def get_html(self, url):
         try:
-            rsp = requests.get(self.url)
-            rsp.raise_for_status()
-            self.html = rsp.text
             logger.info(f'下载 html')
+            rsp = requests.get(url)
+            rsp.raise_for_status()
+            return rsp.text
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403:
                 logger.error('没有权限')
@@ -239,7 +241,7 @@ class XingKongYingShi():
 
     def download(self, url):
         self.url = url
-        self.get_html()
+        self.html = self.get_html(self.url)
         self.parse_video_name()
         self.init_workspace()
         self.parse_m3u8_1_url()
@@ -253,13 +255,36 @@ class XingKongYingShi():
         self.merge()
         self.clear_workspace()
 
+    def download_series(self, series_id):
+        """
+        @功能 下载剧集
+        @参数 剧集id。例如：详情页 https://www.xkvvv.com/detail/106075/ 可知剧集id就是 106075
+        """
+        series_url = f'https://www.xkvvv.com/detail/{series_id}/'
+        series_html = self.get_html(series_url)
+        # with open('series.html', 'w') as f:
+        #     f.write(series_html)
+        pattern = re.compile(r'<a href="(/play.*?)"')
+        logger.info(f'解析单集的 url')
+        result = re.findall(pattern, series_html)
+        episode_queue = queue.Queue()
+
+        for el in result:
+            episode_queue.put(f'https://www.xkvvv.com/{el}')
+
+        while not episode_queue.empty():
+            episode_url = episode_queue.get()
+            logger.info(f'下载单集：{episode_url}')
+            dlr.download(episode_url)
+
+
 if __name__ == '__main__':
     
-    url = 'https://www.xkvvv.com/play/106075/1/12/'
-    dlr = XingKongYingShi()
+    url = 'https://www.xkvvv.com/play/106075/1/13/'
+    dlr = XingKongYingShiDownloader()
     dlr.url = url
-    dlr.download(url)
-
+    # dlr.download(url)
+    dlr.download_series(106074)
 
 # class XingKongYingShiDownloader(DownloaderBase):
 #     def __init__(self):
