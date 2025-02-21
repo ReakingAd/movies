@@ -9,6 +9,7 @@ venv\Scripts\activate   # 进入虚拟环境
 (venv): pip freeze > requirements.txt
 (venv): pip install
 ```
+# TODO: QQMusic 下载专辑时，可以不用每次都重开浏览器吗？新建两个tab后，就操作这俩tab
 # TODO: 0. 快手爬虫
 # TODO: 0. 百度网盘爬虫
 # TODO: 1. 与抓包工具结合？fiddler

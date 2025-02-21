@@ -11,15 +11,28 @@ from loguru import logger
 import requests
 # from websites.downloader_base import DownloaderBase
 from downloader_base import DownloaderBase
+from bs4 import BeautifulSoup
+"""
+星空影视清晰度的：
+
+- 高清: 分辨率1280*532, 码率1089kbps, 总比特率1100kbps, 帧率25
+- 非凡: 分辨率1280*536, 码率951kbps, 总比特率961kbps, 帧率25
+- 量子: 分辨率1920*800, 码率1161kbps, 总比特率1256kbps, 帧率25
+- ikun: 分辨率1920*800, 码率1475kbps, 总比特率1485kbps, 帧率25
+"""
+
+# logger.remove()
+# logger.add("logs/debug.log", level="DEBUG", rotation="100 MB", retention="7 days", compression="zip")
+# logger.add(lambda msg: print(msg), level="INFO")
 
 # 星空影视
 class XingKongYingShiDownloader():
     def __init__(self):
 
         log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-        # log_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>[星空影视]: {message}</level>"
         logger.remove()
-        logger.add(sys.stdout, format=log_format) # 添加日志处理器，并指定输出格式
+        logger.add(sys.stdout, level="INFO", format=log_format) # 添加日志处理器，并指定输出格式
+        logger.add("logs/debug.log", level="DEBUG", rotation="100 MB", retention="7 days", compression="zip")
 
         self.website = '星空影视'
         self.url = None
@@ -29,8 +42,8 @@ class XingKongYingShiDownloader():
         self.m3u8_2_url = None
         self.segment_urls = None
         self.max_workers = 5 # 线程池大小
-        self.max_retry = 5
-        self.retry_delay = 30
+        self.max_retry = 15
+        self.retry_delay = 10
 
         self.workspace = None
         self.m3u8_1_local = None
@@ -75,7 +88,7 @@ class XingKongYingShiDownloader():
             logger.error('解析第一个 m3u8 文件的 url 失败')
 
     def get_m3u8(self, url, local_file):
-        for attempt in range(self.max_retry):
+        for _ in range(self.max_retry):
             try:
                 rsp = requests.get(url, timeout=5)
                 rsp.raise_for_status()
@@ -138,6 +151,9 @@ class XingKongYingShiDownloader():
             
             count_completed = 0
             for future in as_completed(futures):
+                if future.result() is None:
+                    continue
+                curr_thread_download_speed = future.result() / 1000 # 当前线程的下载速度
                 count_completed += 1
                 percent = count_completed / len(self.segment_urls)
                 arrow = '▊' * int(percent * 50)
@@ -201,17 +217,20 @@ class XingKongYingShiDownloader():
         video_file = os.path.join(self.workspace, f'{self.video_name}.mp4')
         curr_path = os.path.dirname(video_file)
         parent_path = os.path.dirname(curr_path)
-        shutil.move(video_file, parent_path)
+        try:
+            shutil.move(video_file, parent_path)
 
-        new_video_file = os.path.join(parent_path, f'{self.video_name}.mp4')
-        if os.path.exists(new_video_file):
-            try:
-                shutil.rmtree(self.workspace)
-                logger.info(f'删除工作临时工作目录')
-            except Exception as e:
-                logger.error(f'删除临时工作目录出错： {e}')
-        else:
-            logger.error(f'未在新位置上找到视频文件')
+            new_video_file = os.path.join(parent_path, f'{self.video_name}.mp4')
+            if os.path.exists(new_video_file):
+                try:
+                    shutil.rmtree(self.workspace)
+                    logger.info(f'删除工作临时工作目录')
+                except Exception as e:
+                    logger.error(f'删除临时工作目录出错： {e}')
+            else:
+                logger.error(f'未在新位置上找到视频文件')
+        except Exception as e:
+            logger.error(f'移动视频文件出错： {e}')
 
     def clean_segment_urls(self):
         """
@@ -263,15 +282,15 @@ class XingKongYingShiDownloader():
         """
         series_url = f'https://www.xkvvv.com/detail/{series_id}/'
         series_html = self.get_html(series_url)
-        # with open('series.html', 'w') as f:
-        #     f.write(series_html)
-        pattern = re.compile(r'<a href="(/play.*?)"')
+        with open('series.html', 'w', encoding='utf-8') as f:
+            f.write(series_html)
+        soup = BeautifulSoup(series_html, 'lxml')
+        elements_a_list = soup.select_one('div.hl-tabs-box.hl-fadeIn').select('ul li a')
+        urls = [f'https://www.xkvvv.com/{el.get("href")}' for el in elements_a_list]
         logger.info(f'解析单集的 url')
-        result = re.findall(pattern, series_html)
         episode_queue = queue.Queue()
-
-        for el in result:
-            episode_queue.put(f'https://www.xkvvv.com/{el}')
+        for url in urls:
+            episode_queue.put(url)
 
         while not episode_queue.empty():
             episode_url = episode_queue.get()
@@ -282,11 +301,12 @@ class XingKongYingShiDownloader():
 if __name__ == '__main__':
     
     # url = 'https://www.xkvvv.com/play/118482/2/37/'
-    url = 'https://www.xkvvv.com/play/115337/3/1/'
+    # url = 'https://www.xkvvv.com/play/118482/2/1/'
+    url = 'https://www.xkvvv.com/play/108478/1/2/'
     dlr = XingKongYingShiDownloader()
     dlr.url = url
-    dlr.download(url)
-    # dlr.download_series(106074)
+    # dlr.download(url)
+    dlr.download_series(6662)
 
 # class XingKongYingShiDownloader(DownloaderBase):
 #     def __init__(self):

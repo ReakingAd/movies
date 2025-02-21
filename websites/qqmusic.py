@@ -6,6 +6,11 @@ import ffmpeg
 from loguru import logger
 from playwright.sync_api import sync_playwright, expect, TimeoutError as PlaywrightTimeoutError
 import requests
+
+logger.remove()
+logger.add("logs/debug.log", level="DEBUG", rotation="500 MB", retention="7 days", compression="zip")
+logger.add(lambda msg: print(msg), level="INFO")
+
 """
 使用 playwright 模拟真人用户操作
 1. 如果首次使用，或者登陆过期，要先执行 downloader.auth(url) 扫码登陆。
@@ -19,7 +24,6 @@ TODO: 2. 下载歌单
     关键点 song_begin, song_num
 TODO: 3. task.py 不能正常退出主进程。join()理解的不够，学学
 """
-
 class QQMusicDownloader():
     def __init__(self):
         self.download_gap = 2 # 每次下载歌曲时，先等带几秒。避免爬取太频繁被封禁
@@ -62,7 +66,8 @@ class QQMusicDownloader():
 
     def convert_m4a_to_mp3(self, input_file, output_file):
         try:
-            print(f'[QQMusic] 将 {self.music_name}.m4a 转换为 {self.music_name}.mp3')
+            logger.debug(f'[QQMusic] 将 {self.music_name}.m4a 转换为 {self.music_name}.mp3')
+            logger.info(f'[QQMusic] 将 {self.music_name}.m4a 转换为 {self.music_name}.mp3')
             (
                 ffmpeg
                 .input(input_file)
@@ -77,7 +82,8 @@ class QQMusicDownloader():
             logger.error(f"{e.stderr.decode()}")
 
     def get_music(self, url):
-        print(f'[QQMusic] 等待 {self.download_gap} 秒..... 后开始下载 {url}')
+        logger.debug(f'[QQMusic] 等待 {self.download_gap} 秒..... 后开始下载 {url}')
+        logger.info(f'[QQMusic] 等待 {self.download_gap} 秒..... 后开始下载 {url}')
         time.sleep(self.download_gap)  # 添加时间间隔，避免请求过快
         resp = requests.get(url)
         if resp.status_code == 200:
@@ -90,7 +96,8 @@ class QQMusicDownloader():
 
     def delete_origin_file(self):
         try:
-            print(f'[QQMusic] 删除源文件 {self.music_name_with_ext}')
+            logger.debug(f'[QQMusic] 删除源文件 {self.music_name_with_ext}')
+            logger.info(f'[QQMusic] 删除源文件 {self.music_name_with_ext}')
             os.remove(os.path.join(self.download_dir, self.music_name_with_ext))
         except OSError as e:
             logger.error(f"Error: {e.strerror}")
@@ -113,6 +120,7 @@ class QQMusicDownloader():
             response = requests.post(req.url, headers=req.headers, data=req.post_data)
             if response.status_code == 200:
                 json_data = json.loads(response.text)
+                logger.debug(json_data)
                 purl = json_data['req_6']['data']['midurlinfo'][0]['purl']
                 self.music_download_url = f'https://ws6.stream.qqmusic.qq.com/{purl}'
                 self.music_name_with_ext = f"{json_data['req_1']['data']['tracks'][0]['title']}.m4a"
@@ -120,12 +128,15 @@ class QQMusicDownloader():
                 self.convert_m4a_to_mp3(os.path.join(self.download_dir, self.music_name_with_ext), os.path.join(self.download_dir, f'{self.music_name}.mp3'))
                 self.delete_origin_file()
             else:
-                print(response.status_code)
+                logger.debug(response.status_code)
+                logger.info(response.status_code)
         # route.continue_()
 
     def download_song(self, song_id):
         self.url = f'https://y.qq.com/n/ryqq/songDetail/{song_id}'
-        print(f'[QQMusic] 拉取 URL: {self.url}')
+        # print(f'[QQMusic] 拉取 URL: {self.url}')
+        logger.debug(f'[QQMusic] 拉取 URL: {self.url}')
+        logger.info(f'[QQMusic] 拉取 URL: {self.url}')
         for i in range(3):
             try:
                 with sync_playwright() as playwright:
@@ -145,18 +156,22 @@ class QQMusicDownloader():
                     context.pages[1].wait_for_timeout(1000) # **加了context.route()拦截后，必须得有这一行。否则在按回车结束input()后，会报错。不知道为什么**
                     break # 执行到此不报错，说明当前歌曲下载成功。跳出重试机制
             except Exception as e:
-                print(f'[QQMusic] {song_id}:下载发生错误：{e}')
+                logger.debug(f'[QQMusic] {song_id}:下载发生错误：{e}')
+                logger.info(f'[QQMusic] {song_id}:下载发生错误：{e}')
                 if i < self.max_retry-1:
-                    print(f"等待 {self.retry_delay} 秒后重试...")
+                    logger.debug(f"等待 {self.retry_delay} 秒后重试...")
+                    logger.info(f"等待 {self.retry_delay} 秒后重试...")
                     time.sleep(self.retry_delay)
                 else:
-                    print(f"{song_id}:已经达到最大尝试次数")
+                    logger.debug(f"{song_id}:已经达到最大尝试次数")
+                    logger.info(f"{song_id}:已经达到最大尝试次数")
 
     def handle_album_lanjie(self, route, req):
         route.continue_()
         resp = requests.request(req.method, req.url, headers=req.headers, data=req.post_data)
         if resp.status_code == 200:
             json_data = json.loads(resp.text)
+            logger.debug(json_data)
             album_name = json_data['data']['album_name']
             singername = json_data['data']['singerinfo'][0]['singername']
             companyname = json_data['data']['companyname']
@@ -181,7 +196,8 @@ class QQMusicDownloader():
 
     def download_album(self, album_id):
         self.album_url = f'https://y.qq.com/n/ryqq/albumDetail/{album_id}'
-        print(f'[QQMusic] 拉取 URL: {self.album_url}')
+        logger.debug(f'[QQMusic] 拉取 URL: {self.album_url}')
+        logger.info(f'[QQMusic] 拉取 URL: {self.album_url}')
         with sync_playwright() as playwright:
             edge_path = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
             browser = playwright.chromium.launch(headless=False, executable_path=edge_path)

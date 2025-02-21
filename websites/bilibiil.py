@@ -3,15 +3,13 @@ import os
 import re
 import shutil
 from time import time
+from bs4 import BeautifulSoup
 import ffmpeg
 from loguru import logger
 import requests
+from urllib.parse import urlparse, parse_qs
 # TODO: 1. 视频分辨率
-# TODO: 3. 只下载音频
-# TODO: 4. 下载合集
-#      https://www.bilibili.com/video/BV16A411W7SQ?p=1
-#      https://www.bilibili.com/video/BV16A411W7SQ?p=2
-#      https://www.bilibili.com/video/BV16A411W7SQ?p=3
+# TODO: 2. 只下载音频
 
 class BilibiliDownloader():
     def __init__(self):
@@ -36,17 +34,42 @@ class BilibiliDownloader():
         self.max_retry = 5
         self.retry_delay = 3
 
-    def download(self, url):
+        self.pod_len = -1 # 分p
+
+    def count_pod(self, html):
+        soup = BeautifulSoup(html, 'lxml')
+        list = soup.select('div.video-pod .video-pod__list.multip.list .video-pod__item')
+        print(f'len={len(list)}')
+        return len(list)
+    
+    def download_pod(self, url):
         self.url = url
         self.html = self.get_html(url)
         self.bv_id = self.parse_bv()
-        self.video_name = self.parse_video_name()
+        self.video_name = self.parse_video_name(self.html)
         self.init_workspace()
         self.parse_video_info()
         self.get_video()
         self.get_audio()
         self.merge()
         self.clear_workspace()
+
+    def download(self, url):
+        self.url = url
+        self.html = self.get_html(url)
+        pod_index = self.parse_pod_index_in_url(self.url)
+        # url中已经自带分p信息，则只下载当前 p
+        if pod_index is not None:
+            self.download_pod(url)
+        else:
+            self.pod_len = self.count_pod(self.html)
+            # 不分p
+            if self.pod_len == 0:
+                self.download_pod(url)
+            # 分p
+            else:
+                for pod_index in range(1, self.pod_len+1):
+                    self.download_pod(f'{url}?p={pod_index}')
 
     def parse_bv(self):
         pattern = r'BV\w{10}'
@@ -67,11 +90,24 @@ class BilibiliDownloader():
         self.video_file = os.path.join(self.workspace, f'{self.video_name}.video.mp4')
         self.audio_file = os.path.join(self.workspace, f'{self.video_name}.audio.mp3')
     
-    def parse_video_name(self):
+    def parse_pod_index_in_url(self, url):
+        try:
+            parsed_url = urlparse(url)
+            query_params = parse_qs(parsed_url.query)
+            pod_index = query_params.get('p')[0]
+            return pod_index
+        except Exception as e:
+            return None
+
+    def parse_video_name(self, html):
         pattern = r'class="video-info-title-inner".*?<h1.*?>(.*?)</h1>'
-        result = re.search(pattern, self.html)
+        result = re.search(pattern, html)
+        if self.pod_len != 0:
+            pod_index = self.parse_pod_index_in_url(self.url)
+            soup = BeautifulSoup(html, 'lxml')
+            pod_name = soup.select_one('div.video-pod__list.multip.list .video-pod__item.active .title-txt').text
         if result is not None:
-            return result.group(1)
+            return f'{result.group(1)}-p{pod_index}-{pod_name}'
         else:
             logger.warning('解析视频名称失败')
 
@@ -158,6 +194,8 @@ class BilibiliDownloader():
             logger.error(f'清理工作区失败: {e}')
 
 if __name__ == '__main__':
-    url = 'https://www.bilibili.com/video/BV1gf421d72w'
+    url = 'https://www.bilibili.com/video/BV16A411W7SQ?p=6' # 分p
+    # url = 'https://www.bilibili.com/video/BV16A411W7SQ?p=2'
+    # url = 'https://www.bilibili.com/video/BV1Ma9tYPEg4' # 不分p
     downloader = BilibiliDownloader()
     downloader.download(url)

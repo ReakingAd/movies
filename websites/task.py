@@ -69,6 +69,16 @@ def worker(task_queue):
 - 子线程领取到任务 None，跳出 while True 循环，随即子线程代码全部执行完毕。主线程可以继续执行thread.join()后面的代码
 - 流程完毕
 """
+def shutdown_if_not_cancel():
+    try:
+        print("60s后关机，按 Ctrl+C 取消：")
+        for remaining in [60, 40, 20]:
+            print(f"剩余时间{remaining}s")
+            time.sleep(20)
+        subprocess.run(['shutdown', '/s', '/t', '0'])
+    except KeyboardInterrupt:
+        print("\n🛑 检测到用户中断，取消关机")
+
 def run(tasks):
     task_queue = queue.Queue()
     thread = threading.Thread(target=worker, args=[task_queue,]) # 下载线程，负责将任务队列的任务一个一个的下载下来
@@ -85,31 +95,16 @@ def run(tasks):
     # 【要点6】 (阻塞) 主线程会阻塞在这里，等待 thread 子线程中的任务执行完毕
     thread.join() 
     print("所有任务执行完毕")
-    # subprocess.run(["shutdown", "/s", "/t", "60"])
+    shutdown_if_not_cancel()
 
 
 if __name__ == '__main__':
     tasks = [
         # {'type': TASK_TYPE.QQMUSIC_SONG, 'target': '0015BszJ09xZ2z'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001FGFZV3KXqN3'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000PYepk3k0ByX'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000rYMQ21IgaIR'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004GArUe26PXvZ'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003sxEME2BlVBh'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001kUrJE405DEt'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004YUmlB1MK3yJ'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003P7CPk0ACl2F'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '000PZ8J80itI0D'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003rcri00ODLql'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003jAGlr3Tyf51'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '004Hmy4f0AsI0N'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '0046jew92EyhAb'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003eESMq10TVKi'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '002c2r3b1pncdb'},
-        {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '001KxUJv4VjpUC'},
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/115337/3/1/'},
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 29498},
-        # {'type': TASK_TYPE.XINGKONGYINGSHI, 'target': 'https://www.xkvvv.com/play/397/1/1/'},
+        # {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '002wzwbE0sL6fs'}, # 解决
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/108478/1/3/'},
+        {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 6662}, # 银魂
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 106075}, # 傲骨贤妻第一季
         # {'type': TASK_TYPE.CHANEIHU, 'target': 'https://www.chabei1.com/vodplay/87783-1-1.html'},
         # {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ?p=2'},
     ]
