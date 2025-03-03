@@ -41,7 +41,7 @@ class XingKongYingShiDownloader():
         self.video_name = None
         self.m3u8_2_url = None
         self.segment_urls = None
-        self.max_workers = 5 # 线程池大小
+        self.max_workers = 30 # 线程池大小
         self.max_retry = 15
         self.retry_delay = 10
 

@@ -103,10 +103,11 @@ if __name__ == '__main__':
         # {'type': TASK_TYPE.QQMUSIC_SONG, 'target': '0015BszJ09xZ2z'},
         # {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '002wzwbE0sL6fs'}, # 解决
         # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/108478/1/3/'},
-        {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 6662}, # 银魂
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 110268}, # 
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 110267}, # 
         # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 106075}, # 傲骨贤妻第一季
         # {'type': TASK_TYPE.CHANEIHU, 'target': 'https://www.chabei1.com/vodplay/87783-1-1.html'},
-        # {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ?p=2'},
+        {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ'},
     ]
     # for i in range(31, 41):
     #     target = f'https://www.xkvvv.com/play/29498/1/{i}/'
