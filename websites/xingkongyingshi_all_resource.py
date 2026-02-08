@@ -123,7 +123,7 @@ if __name__ == '__main__':
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
-    i = 4030
+    i = 117000
     while True:
         if i >= 120_000:
             logger.error('循环次数达到了120000, 退出循环')

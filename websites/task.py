@@ -95,19 +95,24 @@ def run(tasks):
     # 【要点6】 (阻塞) 主线程会阻塞在这里，等待 thread 子线程中的任务执行完毕
     thread.join() 
     print("所有任务执行完毕")
-    shutdown_if_not_cancel()
+    # shutdown_if_not_cancel()
 
 
 if __name__ == '__main__':
     tasks = [
         # {'type': TASK_TYPE.QQMUSIC_SONG, 'target': '0015BszJ09xZ2z'},
-        # {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '002wzwbE0sL6fs'}, # 解决
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/108478/1/3/'},
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 110268}, # 
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 110267}, # 
-        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 106075}, # 傲骨贤妻第一季
+        # {'type': TASK_TYPE.QQMUSIC_ALBUM, 'target': '003Mqb9Q0O2tg6'}, # 解决
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/89359/1/107/'},
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.tcjcz.com/play/122366-0-0.html'},
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.xkvvv.com/play/111752/1/13/'},
+        {'type': TASK_TYPE.XINGKONGYINGSHI_EPISODE, 'target': 'https://www.ffv1.com/play/44801-1-1/'},
+
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 19449}, # 妈妈是杀手第一季
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 49717}, # 豺狼的日子2024
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 51380}, # 人生切割术第二季
+        # {'type': TASK_TYPE.XINGKONGYINGSHI_SERIES, 'target': 111755}, # 绝望主妇第一季 
         # {'type': TASK_TYPE.CHANEIHU, 'target': 'https://www.chabei1.com/vodplay/87783-1-1.html'},
-        {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ'},
+        # {'type': TASK_TYPE.BILIBILI, 'target': 'https://www.bilibili.com/video/BV16A411W7SQ'},
     ]
     # for i in range(31, 41):
     #     target = f'https://www.xkvvv.com/play/29498/1/{i}/'

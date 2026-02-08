@@ -1,4 +1,5 @@
 from enum import Enum, unique
+import json
 import os
 import queue
 import random
@@ -7,47 +8,30 @@ import sys
 import threading
 import time
 import subprocess
+import pymysql
 
-for attempt in range(3):
-    if attempt == 2:
-        break
-    print(f"Attempt {attempt + 1}")
-else:
-    print("Max attempts reached")
-
-def shutdown_if_not_cancel():
-    try:
-        print("60s后关机，按 Ctrl+C 取消：")
-        for remaining in [60, 40, 20]:
-            print(f"剩余时间{remaining}s")
-            time.sleep(20)
-        subprocess.run(['shutdown', '/s', '/t', '0'])
-    except KeyboardInterrupt:
-        print("\n🛑 检测到用户中断，取消关机")
-        return
+import pymysql.cursors
+import requests
+from urllib.parse import urlparse, parse_qs
     
+def test():
+    connection = pymysql.connect(
+        host='192.168.112.129',
+        user='root',
+        password='Pass1234!@#$',
+        database='xkvvv',
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor
+    )
+    try:
+        with connection.cursor() as cursor:
+            select_sql = 'select * from video_resource'
+            cursor.execute(select_sql)
+            results = cursor.fetchall()
+            print(results)
+    finally:
+        connection.close()
+
 if __name__ == '__main__':
-    # print(Task_Type.QQMUSIC_SONG)
-    # print(Task_Type.QQMUSIC_ALBUM)
+    test()
 
-
-    # subprocess.run(["shutdown", "/s", "/t", "60"])
-    # time.sleep(3)
-    # subprocess.run(["shutdown", "/a"])
-    # cancel = input("shuru stop to cancel:")
-    # print(cancel)
-    # if cancel.lower() == "stop":
-    #     # subprocess.run(["shutdown", "/a"])
-    #     print("cancel....")
-    # TODO: 关机命令有没有一个执行队列？怎么查看?
-    shutdown_if_not_cancel()
-    # try:
-    #     print("60s后关机（按 Ctrl+C 取消）")
-    #     for remaining in [60, 40, 20]:
-    #         print(f"⏳ 剩余时间：{remaining}s")
-    #         time.sleep(20)
-    # except KeyboardInterrupt:
-    #     print("\n🛑 检测到用户中断，取消关机")
-    #     subprocess.run(["shutdown", '/a'])
-        
-    # print("start shutdown......")

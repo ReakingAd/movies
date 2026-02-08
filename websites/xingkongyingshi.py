@@ -41,7 +41,7 @@ class XingKongYingShiDownloader():
         self.video_name = None
         self.m3u8_2_url = None
         self.segment_urls = None
-        self.max_workers = 30 # 线程池大小
+        self.max_workers = 300 # 线程池大小
         self.max_retry = 15
         self.retry_delay = 10
 
@@ -69,25 +69,39 @@ class XingKongYingShiDownloader():
             logger.error(f'请求发生错误: {e}')
 
     def parse_video_name(self):
-        pattern = re.compile(r'<span.*?class="hl-infos-title"><a.*?>(.*?)</a><em.*?>(.*?)</em>') 
+        # pattern = re.compile(r'<span.*?class="hl-infos-title"><a.*?>(.*?)</a><em.*?>(.*?)</em>') 
+        print('=========================================')
+        # print(self.html)
+        # pattern = re.compile(r'<h3.*?class="title text-fff">(.*?)</h3>') 
+        # pattern = re.compile(r'<a href="/detail/.*?>(.*?)</a>.*?<em class="hl-text-muted">(.*?)</em>') 
+        pattern = re.compile(r'<a href="/detail/.*?/" title="(.*?)">(.*?)</a>') 
+        # <a href="/detail/21329/" title="刘老根">刘老根</a>
+        # temp_html = '111<h2 class="hl-dc-title hl-data-menu">刘老根3</h2>222'
+        # rst = re.search(pattern, temp_html)
         rst = re.search(pattern, self.html)
+        print(rst)
+        # rst = 111
         if rst is not None:
             self.video_name = f'{rst.group(1)}{rst.group(2)}'
+            # self.video_name = f'{rst.group(1)}'
             self.video_name = self.video_name.replace('&nbsp;', '')
+            # self.video_name = f'1'
+            # self.video_name = self.video_name.replace('&nbsp;', '')
             logger.info(f'解析出视频名称：【{self.video_name}】')
         else:
             logger.error('未解析出视频名称')
 
     def parse_m3u8_1_url(self):
-        pattern = re.compile(r'https://.*?\.m3u8')
+        pattern = re.compile(r'<iframe.*?\?url=(https://.*?\.m3u8)">')
         rst = re.search(pattern, self.html)
         if rst is not None:
-            self.m3u8_1_url = rst.group()
+            self.m3u8_1_url = rst.group(1)
             logger.info(f'解析第一个 m3u8 文件的 url')
         else:
             logger.error('解析第一个 m3u8 文件的 url 失败')
 
     def get_m3u8(self, url, local_file):
+        print(url)
         for _ in range(self.max_retry):
             try:
                 rsp = requests.get(url, timeout=5)
@@ -106,6 +120,9 @@ class XingKongYingShiDownloader():
             logger.error(f'达到最大尝试次数,下载 m3u8 失败')
             raise Exception('下载 m3u8 失败')
 
+    # https://bfikuncdn.com/20221124/nntErGDU/index.m3u8
+    # /20221124/nntErGDU/2000kb/hls/index.m3u8
+    # https://bfikuncdn.com/20221124/nntErGDU/2000kb/hls/index.m3u8
     def parse_m3u8_2_url(self):
         file_path = os.path.join(self.workspace, '1.m3u8')
         with open(file_path, 'r') as f:
@@ -114,6 +131,7 @@ class XingKongYingShiDownloader():
             rst = re.findall(pattern, text)
             if rst is not None:
                 self.m3u8_2_url = self.m3u8_1_url.replace('index.m3u8', rst[0])
+                # self.m3u8_2_url = self.m3u8_1_url.replace('index.m3u8', rst[0].split('/', 3)[-1])
                 logger.info('解析第二个 m3u8 文件的 url')
             else:
                 logger.error('解析第二个 m3u8 文件的 url 失败')
@@ -126,6 +144,7 @@ class XingKongYingShiDownloader():
             rst = re.findall(pattern, text)
             if rst is not None:
                 self.segment_urls = [f"{ re.sub(r'[^/]+$', el, self.m3u8_2_url)}" for el in rst]
+                # self.segment_urls = [el for el in rst]
                 logger.info(f'解析视频碎片 urls')
             else:
                 logger.error('解析视频碎片 urls 失败')
@@ -278,15 +297,17 @@ class XingKongYingShiDownloader():
     def download_series(self, series_id):
         """
         @功能 下载剧集
-        @参数 剧集id。例如：详情页 https://www.xkvvv.com/detail/106075/ 可知剧集id就是 106075
+        @参数 剧集id。例如：详情页 https://www.ffv1.com/detail/106075/ 可知剧集id就是 106075
         """
-        series_url = f'https://www.xkvvv.com/detail/{series_id}/'
+        # series_url = f'https://www.ffv1.com/detail/{series_id}/'
+        series_url = f'https://www.ffv1.com/detail/{series_id}/'
         series_html = self.get_html(series_url)
         with open('series.html', 'w', encoding='utf-8') as f:
             f.write(series_html)
         soup = BeautifulSoup(series_html, 'lxml')
-        elements_a_list = soup.select_one('div.hl-tabs-box.hl-fadeIn').select('ul li a')
-        urls = [f'https://www.xkvvv.com/{el.get("href")}' for el in elements_a_list]
+        # elements_a_list = soup.select_one('div.hl-tabs-box.hl-fadeIn').select('ul li a')
+        elements_a_list = soup.select_one('div.playlist').select('ul li a')
+        urls = [f'https://www.ffv1.com/{el.get("href")}' for el in elements_a_list]
         logger.info(f'解析单集的 url')
         episode_queue = queue.Queue()
         for url in urls:
@@ -300,13 +321,16 @@ class XingKongYingShiDownloader():
 
 if __name__ == '__main__':
     
-    # url = 'https://www.xkvvv.com/play/118482/2/37/'
-    # url = 'https://www.xkvvv.com/play/118482/2/1/'
-    url = 'https://www.xkvvv.com/play/108478/1/2/'
+    # url = 'https://www.ffv1.com/play/118482/2/37/'
+    # url = 'https://www.ffv1.com/play/118482/2/1/'
+    # url = 'https://www.ffv1.com/play/27812/1/39/'
+    # url = 'https://www.tcjcz.com/play/122366-0-0.html'
+    # url = 'https://www.ffv1.com/play/21329/1/3/'
+    url = 'https://www.ffv1.com/play/44801-1-1/'
     dlr = XingKongYingShiDownloader()
     dlr.url = url
-    # dlr.download(url)
-    dlr.download_series(6662)
+    dlr.download(url)
+    # dlr.download_series(74726)
 
 # class XingKongYingShiDownloader(DownloaderBase):
 #     def __init__(self):
